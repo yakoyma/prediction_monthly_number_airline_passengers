@@ -27,8 +27,9 @@ import keras_tuner
 import sktime
 
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.callbacks import EarlyStopping
 from sktime.utils.plotting import plot_series
+from tensorflow.keras.callbacks import EarlyStopping
+from keras_tuner.tuners import RandomSearch
 from functions import *
 
 # Display versions of platforms and packages
@@ -43,7 +44,7 @@ print('Sktime: {}'.format(sktime.__version__))
 # Constants
 SEED = 0
 TIMESTEP = 1
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 EPOCHS = 100
 PATIENCE = 5
 
@@ -198,7 +199,7 @@ print(f'y_test shape: {y_test.shape}')
 # Train and evaluate the LSTM model
 # Build the model
 # Instantiate the tuner
-tuner = keras_tuner.RandomSearch(
+tuner = RandomSearch(
     hypermodel=build_lstm_model,
     objective='val_loss',
     max_trials=5,

@@ -15,7 +15,7 @@ import sklearn
 from sktime.performance_metrics import forecasting
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout
-from tensorflow.keras.optimizers import Adam, RMSprop
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import metrics
 
 
@@ -83,7 +83,7 @@ def build_dnn_model(hp):
 
     Parameter
     ---------
-    hp: keras_tuner.HyperParameters
+    hp: keras_tuner.HyperParameters()
         Hyperparameters to optimise.
 
     Return
@@ -96,6 +96,10 @@ def build_dnn_model(hp):
         hp.Int('units', min_value=64, max_value=512, step=32),
         activation='elu',
         input_dim=1))
+    model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
+    model.add(Dense(
+        hp.Int('units', min_value=64, max_value=512, step=32),
+        activation='elu'))
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(
         hp.Int('units', min_value=64, max_value=512, step=32),
@@ -118,7 +122,7 @@ def build_lstm_model(hp):
 
     Parameter
     ---------
-    hp: keras_tuner.HyperParameters
+    hp: keras_tuner.HyperParameters()
         Hyperparameters to optimise.
 
     Return
@@ -141,7 +145,7 @@ def build_lstm_model(hp):
 
     model.compile(
         loss='mean_squared_error',
-        optimizer=RMSprop(learning_rate=hp.Float(
+        optimizer=Adam(learning_rate=hp.Float(
                 'lr', min_value=0.0001, max_value=0.01, sampling='log')),
         metrics=['mean_squared_error', 'mean_absolute_error'])
     return model
