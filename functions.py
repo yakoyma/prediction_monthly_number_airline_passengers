@@ -83,7 +83,7 @@ def build_dnn_model(hp):
 
     Parameter
     ---------
-    hp: keras_tuner.HyperParameters()
+    hp: keras_tuner.HyperParameters
         Hyperparameters to optimise.
 
     Return
@@ -122,7 +122,7 @@ def build_lstm_model(hp):
 
     Parameter
     ---------
-    hp: keras_tuner.HyperParameters()
+    hp: keras_tuner.HyperParameters
         Hyperparameters to optimise.
 
     Return
