@@ -15,7 +15,6 @@ import sklearn
 from sktime.performance_metrics import forecasting
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import metrics
 
 
@@ -44,38 +43,6 @@ def load_dataset(file_path):
     return dataset
 
 
-def generate_data_batches(data, dates, timestep):
-    """
-    This function transforms the Time Series target to create an exogenous
-    variable based on the time step.
-
-    Parameters
-    ----------
-    - data: np.ndarray
-            The target variable in the Time Series dataset.
-    - dates: np.ndarray
-             The dates in the Time Series dataset.
-    - timestep: int
-                The value of time step to include in each sequence.
-
-    Return
-    ------
-    dataset: pd.DataFrame
-             A dataframe that contains the transformed target y,
-             the transformed index dates, and exogenous variable X.
-    """
-    X, y, y_dates = [], [], []
-    for i in range(len(data) - timestep):
-        X.append(data[i:i + 1, 0])
-        y.append(data[i + 1, 0])
-        y_dates.append(dates[i + 1, 0])
-    dataset = pd.DataFrame(
-        data={'Target': np.array(y).flatten(),
-              'Exog': np.array(X).flatten()},
-        index=np.array(y_dates).flatten())
-    return dataset
-
-
 def build_dnn_model(hp):
     """
     This function builds a TensorFlow DNN (Deep Neural Network) model with
@@ -93,24 +60,20 @@ def build_dnn_model(hp):
     """
     model = Sequential()
     model.add(Dense(
-        hp.Int('units', min_value=64, max_value=512, step=32),
-        activation='elu',
+        hp.Int('units', min_value=32, max_value=128, step=32),
+        hp.Choice('activation', values=['elu', 'relu', 'tanh']),
         input_dim=1))
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(
-        hp.Int('units', min_value=64, max_value=512, step=32),
-        activation='elu'))
-    model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
-    model.add(Dense(
-        hp.Int('units', min_value=64, max_value=512, step=32),
-        activation='elu'))
+        hp.Int('units', min_value=32, max_value=128, step=32),
+        hp.Choice('activation', values=['elu', 'relu', 'tanh'])))
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(1))
 
     model.compile(
-        loss='mean_squared_error',
-        optimizer=Adam(learning_rate=hp.Float(
-                'lr', min_value=0.0001, max_value=0.01, sampling='log')),
+        loss=hp.Choice(
+            'loss', values=['mean_squared_error', 'mean_absolute_error']),
+        optimizer=hp.Choice('optimizer', values=['adam', 'rmsprop']),
         metrics=['mean_squared_error', 'mean_absolute_error'])
     return model
 
@@ -132,21 +95,15 @@ def build_lstm_model(hp):
     """
     model = Sequential()
     model.add(LSTM(
-        hp.Int('units', 5, 512),
-        activation='elu',
-        return_sequences=True,
+        hp.Int('units', 5, 128),
+        hp.Choice('activation', values=['elu', 'relu', 'tanh']),
         input_shape=(1, 1)))
-    model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
-    model.add(LSTM(
-        hp.Int('units', 5, 512),
-        activation='elu',
-        return_sequences=False))
     model.add(Dense(1))
 
     model.compile(
-        loss='mean_squared_error',
-        optimizer=Adam(learning_rate=hp.Float(
-                'lr', min_value=0.0001, max_value=0.01, sampling='log')),
+        loss=hp.Choice(
+            'loss', values=['mean_squared_error', 'mean_absolute_error']),
+        optimizer=hp.Choice('optimizer', values=['adam', 'rmsprop']),
         metrics=['mean_squared_error', 'mean_absolute_error'])
     return model
 

@@ -28,6 +28,7 @@ import sktime
 
 from sklearn.preprocessing import MinMaxScaler
 from sktime.utils.plotting import plot_series
+from sktime.transformations.series.lag import Lag
 from tensorflow.keras.callbacks import EarlyStopping
 from keras_tuner.tuners import RandomSearch
 from functions import *
@@ -43,7 +44,6 @@ print('Sktime: {}'.format(sktime.__version__))
 
 # Constants
 SEED = 0
-TIMESTEP = 1
 BATCH_SIZE = 64
 EPOCHS = 50
 PATIENCE = 5
@@ -123,10 +123,10 @@ plt.show()
 # Transformation of the dataset to create an exogenous variable.
 # Given the number of passengers in month x,
 # the number of passengers is predicted for the following month x+1.
-X = generate_data_batches(
-    np.array(dataset).reshape(-1, 1),
-    np.array(dataset.index).reshape(-1, 1),
-    TIMESTEP)
+X = Lag([0, 1]).fit_transform(dataset).dropna()
+X = X.rename(columns={
+    'lag_0__Passengers': 'Target',
+    'lag_1__Passengers': 'Exog'})
 
 # Display head and the tail of the dataset
 print(pd.concat([X.head(), X.tail()]))
@@ -134,8 +134,8 @@ print(pd.concat([X.head(), X.tail()]))
 # Display the target and exogenous variable
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    pd.Series(data=X.Target, index=X.index),
-    pd.Series(data=X.Exog, index=X.index),
+    X.Target,
+    X.Exog,
     labels=['Target', 'Exogenous variable'],
     markers=['.', '.'],
     x_label='Date',
@@ -235,7 +235,7 @@ for metric, score in zip(['Loss (MSE)', 'MSE', 'MAE'], scores):
 
 # Denormalise the predicted target
 print(f'\ny_pred shape: {y_pred.shape}')
-pred_target = scaler.inverse_transform(y_pred).astype(int)
+pred_target = scaler.inverse_transform(y_pred)
 print('Predicted target shape: ', pred_target.shape)
 print('Predicted target:\n', pred_target.flatten())
 print('\nActual target shape: ', np.array(test.Target).shape)

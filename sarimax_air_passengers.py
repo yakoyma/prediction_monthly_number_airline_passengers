@@ -38,6 +38,7 @@ from pmdarima.arima.utils import ndiffs
 from statsmodels.tsa.arima_process import ArmaProcess
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from sktime.utils.plotting import plot_series
+from sktime.transformations.series.lag import Lag
 from sktime.forecasting.model_selection import temporal_train_test_split
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.series.detrend import Deseasonalizer, Detrender
@@ -62,7 +63,6 @@ print('PyCaret: {}'.format(pycaret.__version__))
 SEED = 0
 PERIOD = 12
 FOLDS = 3
-TIMESTEP = 1
 
 # Set the random seed for reproducibility
 random.seed(SEED)
@@ -169,10 +169,10 @@ plt.show()
 # Transformation of the dataset to create an exogenous variable.
 # Given the number of passengers in month x,
 # the number of passengers is predicted for the following month x+1.
-X = generate_data_batches(
-    np.array(dataset).reshape(-1, 1),
-    np.array(dataset.index).reshape(-1, 1),
-    TIMESTEP)
+X = Lag([0, 1]).fit_transform(dataset).dropna()
+X = X.rename(columns={
+    'lag_0__Passengers': 'Target',
+    'lag_1__Passengers': 'Exog'})
 
 # Display head and the tail of the dataset
 print(pd.concat([X.head(), X.tail()]))
@@ -180,8 +180,8 @@ print(pd.concat([X.head(), X.tail()]))
 # Display the target and exogenous variable
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    pd.Series(data=X.Target, index=X.index),
-    pd.Series(data=X.Exog, index=X.index),
+    X.Target,
+    X.Exog,
     labels=['Target', 'Exogenous variable'],
     markers=['.', '.'],
     x_label='Date',
@@ -378,7 +378,7 @@ their optimised hyperparameters.
 """
 # Initialisation of the setup
 s = setup(
-    dataset,
+    data=dataset,
     target='Passengers',
     scale_target='minmax',
     fold=FOLDS,
@@ -405,7 +405,7 @@ plot_model(best, plot='forecast')
 # The transformed dataset X with exogenous variable
 # Initialisation of the setup
 s = setup(
-    X,
+    data=X,
     target='Target',
     scale_target='minmax',
     scale_exogenous='minmax',
