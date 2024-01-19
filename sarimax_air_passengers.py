@@ -144,8 +144,7 @@ print(f'Invertibility test result: '
       f'{ArmaProcess(dataset).isinvertible}')
 
 # Split the dataset into training and test sets
-train, test = temporal_train_test_split(
-    dataset, test_size=int(0.25 * dataset.shape[0]))
+train, test = temporal_train_test_split(y=dataset, test_size=0.25)
 print(f'\nTraining set shape: {train.shape}')
 print(pd.concat([train.head(), train.tail()]))
 print(f'\nTest set shape: {test.shape}')
@@ -189,7 +188,6 @@ plot_series(
     ax=ax)
 ax.set_title(f'Monthly number of passengers from '
              f'{X.index.min()} to {X.index.max()}')
-ax.grid(True)
 plt.show()
 
 

@@ -159,8 +159,8 @@ print(pd.concat([test.head(), test.tail()]))
 # Display training and test targets
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    pd.Series(data=train.Target, index=train.index),
-    pd.Series(data=test.Target, index=test.index),
+    train.Target,
+    test.Target,
     labels=['Training Target', 'Test Target'],
     markers=['.', '.'],
     x_label='Date',
