@@ -14,7 +14,7 @@ import sklearn
 
 from sktime.performance_metrics import forecasting
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import Input, Dense, LSTM, Dropout
 from tensorflow.keras import metrics
 
 
@@ -59,10 +59,10 @@ def build_dnn_model(hp):
            The optimised model.
     """
     model = Sequential()
+    model.add(Input(shape=1))
     model.add(Dense(
         hp.Int('units', min_value=32, max_value=128, step=32),
-        hp.Choice('activation', values=['elu', 'relu', 'tanh']),
-        input_dim=1))
+        hp.Choice('activation', values=['elu', 'relu', 'tanh'])))
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(
         hp.Int('units', min_value=32, max_value=128, step=32),
