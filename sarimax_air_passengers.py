@@ -378,6 +378,9 @@ s = setup(
     n_jobs=-1,
     session_id=SEED)
 
+# Check statistical tests on the dataset
+print(check_stats())
+
 # Selection of the best model by cross-validation using basic hyperparameters
 best = compare_models(
     fold=FOLDS,
@@ -405,6 +408,9 @@ s = setup(
     fh=int(0.2 * X.shape[0]),
     n_jobs=-1,
     session_id=SEED)
+
+# Check statistical tests on the dataset
+print(check_stats())
 
 # Selection of the best model by cross-validation using basic hyperparameters
 best = compare_models(
