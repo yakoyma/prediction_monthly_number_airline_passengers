@@ -59,13 +59,13 @@ def build_dnn_model(hp):
            The optimised model.
     """
     model = Sequential()
-    model.add(Input(shape=1))
+    model.add(Input(shape=12))
     model.add(Dense(
-        hp.Int('units', min_value=32, max_value=128, step=32),
+        hp.Int('units', min_value=64, max_value=1024, step=32),
         hp.Choice('activation', values=['elu', 'relu', 'tanh'])))
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(
-        hp.Int('units', min_value=32, max_value=128, step=32),
+        hp.Int('units', min_value=64, max_value=1024, step=32),
         hp.Choice('activation', values=['elu', 'relu', 'tanh'])))
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(1))
@@ -95,9 +95,9 @@ def build_lstm_model(hp):
     """
     model = Sequential()
     model.add(LSTM(
-        hp.Int('units', 5, 128),
+        hp.Int('units', 5, 1024),
         hp.Choice('activation', values=['elu', 'relu', 'tanh']),
-        input_shape=(1, 1)))
+        input_shape=(12, 1)))
     model.add(Dense(1))
 
     model.compile(
