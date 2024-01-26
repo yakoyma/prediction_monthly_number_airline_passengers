@@ -41,8 +41,9 @@ from sktime.forecasting.compose import TransformedTargetForecaster
 from sktime.forecasting.trend import PolynomialTrendForecaster
 from sktime.forecasting.sarimax import SARIMAX
 from statsmodels.tsa.arima_process import ArmaProcess
-from statsmodels.stats.diagnostic import acorr_ljungbox
+from statsmodels.tsa.stattools import acf
 from pmdarima.arima.utils import ndiffs
+from statsmodels.stats.diagnostic import acorr_ljungbox
 from pycaret.time_series import *
 from functions import *
 
@@ -59,6 +60,7 @@ print('PyCaret: {}'.format(pycaret.__version__))
 # Constants
 SEED = 0
 PERIOD = 12
+SP = 12
 FOLDS = 3
 
 # Set the random seed for reproducibility
@@ -135,36 +137,40 @@ plt.show()
 ===============================================================================
 """
 # Tests to determine whether the dataset is stationary and/or invertible
-print(f'\n\nStationarity test result: '
-      f'{ArmaProcess(dataset).isstationary}')
-print(f'Invertibility test result: '
-      f'{ArmaProcess(dataset).isinvertible}')
+print(f'\n\nStationarity test result: {ArmaProcess(dataset).isstationary}')
+print(f'Invertibility test result: {ArmaProcess(dataset).isinvertible}')
 
 # Split the dataset into training and test sets
-train, test = temporal_train_test_split(y=dataset, test_size=0.25)
-print(f'\nTraining set shape: {train.shape}')
-print(pd.concat([train.head(), train.tail()]))
-print(f'\nTest set shape: {test.shape}')
-print(pd.concat([test.head(), test.tail()]))
+train_set, test_set = temporal_train_test_split(y=dataset, test_size=0.25)
+print(f'\nTraining set shape: {train_set.shape}')
+print(pd.concat([train_set.head(), train_set.tail()]))
+print(f'\nTest set shape: {test_set.shape}')
+print(pd.concat([test_set.head(), test_set.tail()]))
 
 # Display training and test targets
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    train,
-    test,
+    train_set,
+    test_set,
     labels=['Training Target', 'Test Target'],
     markers=['.', '.'],
     x_label='Date',
     y_label='Passengers',
     ax=ax)
 ax.set_title(f'Monthly number of passengers from '
-             f'{train.index.min()} to {test.index.max()}')
+             f'{train_set.index.min()} to {test_set.index.max()}')
 plt.show()
 
+# Display autocorrelation
+fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+ax.plot(acf(train_set.Passengers))
+ax.set_xlabel('Lags')
+ax.set_title('Autocorrelation')
+plt.show()
 
 # Transformation of the dataset to create exogenous variables.
 # Creation of 12 lags (features)
-X = Lag([i for i in range(13)]).fit_transform(dataset).dropna()
+X = Lag([i for i in range(SP + 1)]).fit_transform(dataset).dropna()
 X = X.rename(columns={'lag_0__Passengers': 'Target'})
 
 # Display head and the tail of the dataset
@@ -193,14 +199,14 @@ plt.show()
 """
 # 3.1 Pmdarima
 # Determine whether to differentiate in order to make it stationary
-# Estimate the number of times to differentiate using a KPSS test
+# Estimate the number of times to differentiate using the KPSS test
 print(f"\n\nEstimate the number of times to differentiate the data using "
-      f"the KPSS test: {ndiffs(np.array(train), test='kpss')}")
+      f"the KPSS test: {ndiffs(np.array(train_set), test='kpss')}")
 
 # Instantiate and fit the model
 auto_arima_model = pm.auto_arima(
-    y=np.array(train),
-    d=ndiffs(np.array(train), test='kpss'),
+    y=np.array(train_set),
+    d=ndiffs(np.array(train_set), test='kpss'),
     m=PERIOD,
     seasonal=True,
     stationary=False,
@@ -214,29 +220,29 @@ print(f'\nSummary of the model:\n{auto_arima_model.summary()}')
 
 # Make predictions
 forecast = pd.Series(
-    data=np.array(auto_arima_model.predict(test.shape[0])),
-    index=np.array(test.index))
+    data=np.array(auto_arima_model.predict(test_set.shape[0])),
+    index=np.array(test_set.index))
 print(f'\nForecast:\n{forecast}')
 
 # Display metrics
 print('\nForecast target shape: ', np.array(forecast).shape)
-print('Actual target shape: ', np.array(test).shape)
+print('Actual target shape: ', np.array(test_set).shape)
 print('SMAPE: {:.3f}'.format(
-    pm.metrics.smape(np.array(test), np.array(forecast).reshape(-1, 1))))
+    pm.metrics.smape(np.array(test_set), np.array(forecast).reshape(-1, 1))))
 display_sktime_metrics(
-    np.array(test),
+    np.array(test_set),
     np.array(forecast).reshape(-1, 1),
-    np.array(train),
-    PERIOD)
+    np.array(train_set),
+    SP)
 display_sklearn_metrics(
-    np.array(test), np.array(forecast).reshape(-1, 1), SEED)
+    np.array(test_set), np.array(forecast).reshape(-1, 1), SEED)
 
 # Display actual values of the training target
 # and the test target compared to forecast
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    train,
-    test,
+    train_set,
+    test_set,
     forecast,
     labels=['Training Target', 'Test Target', 'Forecast'],
     markers=['.', '.', '.'],
@@ -244,7 +250,7 @@ plot_series(
     y_label='Passengers',
     ax=ax)
 ax.set_title(f'Training Target and Test Target vs. Forecast from '
-             f'{train.index.min()} to {test.index.max()}')
+             f'{train_set.index.min()} to {test_set.index.max()}')
 plt.show()
 
 
@@ -252,7 +258,7 @@ plt.show()
 # 3.2 Statsmodels
 # Instantiate the model
 model = sm.tsa.statespace.SARIMAX(
-    endog=train,
+    endog=train_set,
     order=auto_arima_model.get_params()['order'],
     seasonal_order=auto_arima_model.get_params()['seasonal_order'],
     trend='t',
@@ -271,36 +277,37 @@ print('Results BIC: {:.3f}'.format(np.round(res.bic, 2)))
 print('Results MSE: {:.3f}'.format(np.round(res.mse, 2)))
 print('Results MAE: {:.3f}'.format(np.round(res.mae, 2)))
 print('Ljung-Box stat: {:.3f}'.format(
-    np.round(acorr_ljungbox(res.resid, period=PERIOD)['lb_stat'].mean(), 2)))
+    np.round(acorr_ljungbox(res.resid, period=None)['lb_stat'].mean(), 2)))
 print('Ljung-Box pvalue: {:.3f}'.format(
-    acorr_ljungbox(res.resid, period=PERIOD)['lb_pvalue'].mean()))
+    acorr_ljungbox(res.resid, period=None)['lb_pvalue'].mean()))
 
 # Display diagnostics
 res.plot_diagnostics(auto_ylims=True)
 plt.show()
 
 # Make forecasts
-forecast = res.forecast(steps=test.shape[0], dynamic=False)
+forecast = res.forecast(steps=test_set.shape[0], dynamic=False)
 print(f'\nForecast:\n{forecast}')
 
 # Display metrics for predictions
 print('\nForecast target shape: ', np.array(forecast).shape)
-print('Actual target shape: ', np.array(test).shape)
+print('Actual target shape: ', np.array(test_set).shape)
 print('SMAPE: {:.3f}'.format(
-    pm.metrics.smape(np.array(test).flatten(), np.array(forecast))))
+    pm.metrics.smape(np.array(test_set).flatten(), np.array(forecast))))
 display_sktime_metrics(
-    np.array(test).flatten(),
+    np.array(test_set).flatten(),
     np.array(forecast),
-    np.array(train),
-    PERIOD)
-display_sklearn_metrics(np.array(test).flatten(), np.array(forecast), SEED)
+    np.array(train_set),
+    SP)
+display_sklearn_metrics(
+    np.array(test_set).flatten(), np.array(forecast), SEED)
 
 # Display actual values of the training target
 # and the test target compared to forecast
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    train,
-    test,
+    train_set,
+    test_set,
     forecast,
     labels=['Training Target', 'Test Target', 'Forecast'],
     markers=['.', '.', '.'],
@@ -308,7 +315,7 @@ plot_series(
     y_label='Passengers',
     ax=ax)
 ax.set_title(f'Training Target and Test Target vs. Forecast from '
-             f'{train.index.min()} to {test.index.max()}')
+             f'{train_set.index.min()} to {test_set.index.max()}')
 plt.show()
 
 
@@ -316,7 +323,7 @@ plt.show()
 # 3.3 Sktime
 # Instantiate the model
 forecaster = TransformedTargetForecaster([
-    ('Deseasonalizer', Deseasonalizer(sp=PERIOD)),
+    ('Deseasonalizer', Deseasonalizer(sp=SP)),
     ('Detrender', Detrender(PolynomialTrendForecaster(degree=1))),
     ('SARIMAX', SARIMAX(
         order=auto_arima_model.get_params()['order'],
@@ -328,27 +335,27 @@ forecaster = TransformedTargetForecaster([
 
 # Fit the model and make predictions
 forecast = forecaster.fit_predict(
-    y=train, fh=ForecastingHorizon(test.index, is_relative=False))
+    y=train_set, fh=ForecastingHorizon(test_set.index, is_relative=False))
 print(f'\n\nForecast:\n{forecast}')
 
 # Display metrics
 print('\nForecast target shape: ', np.array(forecast).shape)
-print('Actual target shape: ', np.array(test).shape)
+print('Actual target shape: ', np.array(test_set).shape)
 print('SMAPE: {:.3f}'.format(
-    pm.metrics.smape(np.array(test), np.array(forecast))))
+    pm.metrics.smape(np.array(test_set), np.array(forecast))))
 display_sktime_metrics(
-    np.array(test),
+    np.array(test_set),
     np.array(forecast),
-    np.array(train),
-    PERIOD)
-display_sklearn_metrics(np.array(test), np.array(forecast), SEED)
+    np.array(train_set),
+    SP)
+display_sklearn_metrics(np.array(test_set), np.array(forecast), SEED)
 
 # Display actual values of the training target
 # and the test target compared to forecast
 fig, ax = plt.subplots(figsize=(12, 6))
 plot_series(
-    train,
-    test,
+    train_set,
+    test_set,
     forecast,
     labels=['Training Target', 'Test Target', 'Forecast'],
     markers=['.', '.', '.'],
@@ -356,7 +363,7 @@ plot_series(
     y_label='Passengers',
     ax=ax)
 ax.set_title(f'Training Target and Test Target vs. Forecast from '
-             f'{train.index.min()} to {test.index.max()}')
+             f'{train_set.index.min()} to {test_set.index.max()}')
 plt.show()
 
 
