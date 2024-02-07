@@ -26,12 +26,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import ydata_profiling
 import sktime
 import statsmodels
 import pmdarima as pm
 import statsmodels.api as sm
 import pycaret
 
+from ydata_profiling import ProfileReport
 from sktime.utils.plotting import plot_series
 from sktime.transformations.series.lag import Lag
 from sktime.forecasting.model_selection import temporal_train_test_split
@@ -51,6 +53,7 @@ from functions import *
 print('\nPython: {}'.format(platform.python_version()))
 print('Pandas: {}'.format(pd.__version__))
 print('Seaborn: {}'.format(sns.__version__))
+print('YData-profiling: {}'.format(ydata_profiling.__version__))
 print('Sktime: {}'.format(sktime.__version__))
 print('Statsmodels: {}'.format(statsmodels.__version__))
 print('Pmdarima: {}'.format(pm.__version__))
@@ -115,6 +118,10 @@ dataset.index = pd.PeriodIndex(dataset.index, freq='M')
 
 # Display head and the tail of the dataset
 print(pd.concat([dataset.head(), dataset.tail()]))
+
+# Time Series Profiling Report
+profile = ProfileReport(df=dataset, tsmode=True, title='Profiling Report')
+profile.to_file('dataset_report.html')
 
 # Display the monthly number of passengers
 fig, ax = plt.subplots(figsize=(12, 6))
