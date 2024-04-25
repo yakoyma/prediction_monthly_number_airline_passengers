@@ -58,6 +58,7 @@ def build_dnn_model(hp):
     model: tf.keras.Model
            The optimised model.
     """
+    # Instantiate the model
     model = Sequential()
     model.add(Input(shape=12))
     model.add(Dense(
@@ -70,6 +71,7 @@ def build_dnn_model(hp):
     model.add(Dropout(hp.Choice('dropout', values=[0.1, 0.2, 0.3, 0.4, 0.5])))
     model.add(Dense(1))
 
+    # Compile the model
     model.compile(
         loss=hp.Choice(
             'loss', values=['mean_squared_error', 'mean_absolute_error']),
